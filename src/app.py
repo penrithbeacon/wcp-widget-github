@@ -43,17 +43,22 @@ def read_config(iid=None):
     if iid is None:
         iid = get_instance_id()
     path = config_file_for(iid)
+    instance_cfg = None
     try:
         with open(path) as f:
-            return json.load(f)
+            instance_cfg = json.load(f)
     except Exception:
-        if path != GLOBAL_CONFIG_FILE:
-            try:
-                with open(GLOBAL_CONFIG_FILE) as f:
-                    return json.load(f)
-            except Exception:
-                pass
-        return {}
+        pass
+    # Fall back to global config if per-instance config has no token
+    # (covers both missing file and empty {} created by Add Widget flow)
+    if (instance_cfg is None or not instance_cfg.get("githubToken")) and path != GLOBAL_CONFIG_FILE:
+        try:
+            with open(GLOBAL_CONFIG_FILE) as f:
+                global_cfg = json.load(f)
+            return {**(instance_cfg or {}), **global_cfg}
+        except Exception:
+            pass
+    return instance_cfg or {}
 
 def write_config(data, iid=None):
     if iid is None:
@@ -258,10 +263,14 @@ def widget_configure():
     try:
         iid = get_instance_id()
         data = request.get_json(force=True) or {}
-        cfg = write_config({
-            "githubToken": (data.get("githubToken") or "").strip() or None,
-        }, iid=iid)
+        token = (data.get("githubToken") or "").strip() or None
+        cfg_data = {"githubToken": token}
+        cfg = write_config(cfg_data, iid=iid)
+        # Mirror credentials to global config so all other staves find them
+        if token:
+            write_config(cfg_data, iid="")
         clear_cache(iid)
+        clear_cache("")
         return jsonify({"success": True, "configured": bool(cfg.get("githubToken"))})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
