@@ -15,6 +15,23 @@ from flask import Flask, jsonify, render_template, request, Response
 
 app = Flask(__name__)
 
+# ── CORS ──────────────────────────────────────────────────────────────────────
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin']  = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, DELETE, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = (
+        'Content-Type, Wcp-Instance-Id, Wcp-Dashboard-Id, Wcp-Version, Wcp-Widget-Id'
+    )
+    return response
+
+@app.route('/widget/<path:p>', methods=['OPTIONS'])
+@app.route('/widget/', methods=['OPTIONS'])
+@app.route('/wcp', methods=['OPTIONS'])
+def cors_preflight(p=''):
+    return Response('', status=204)
+
 DATA_DIR = "/app/data"
 GLOBAL_CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
 GH_BASE = "https://api.github.com"
@@ -131,9 +148,10 @@ ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
 </svg>"""
 
 WCP_MANIFEST = {
-    "wcp": "1.3.1",
+    "wcp": "1.4.0",
+    "uuid": "47b58468-2ad8-4cbd-a7f3-58ad8fcf213c",
     "name": "GitHub",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": (
         "GitHub repositories — browse all repos for the authenticated account, "
         "sorted by last push. Manage credentials via the Settings component."
@@ -193,6 +211,21 @@ WCP_MANIFEST = {
 
 # ── WCP boilerplate endpoints ─────────────────────────────────────────────────
 
+@app.route("/wcp")
+def container_directory():
+    return jsonify({
+        "type":    "directory",
+        "wcp":     "1.4.0",
+        "widgets": [{
+            "id":          "github",
+            "uuid":        WCP_MANIFEST["uuid"],
+            "name":        WCP_MANIFEST["name"],
+            "description": WCP_MANIFEST["description"],
+            "icon":        WCP_MANIFEST["icon"],
+            "manifest":    "/widget/wcp",
+        }]
+    })
+
 @app.route("/widget/")
 @app.route("/widget/index.html")
 def widget_root():
@@ -212,10 +245,13 @@ def widget_icon():
 
 @app.route("/widget/api/guids")
 def api_guids():
-    return jsonify({"components": [
-        {"id": c["id"], "uuid": c["uuid"], "name": c["name"]}
-        for c in WCP_MANIFEST.get("components", [])
-    ]})
+    return jsonify({
+        "uuid": WCP_MANIFEST["uuid"],
+        "components": [
+            {"id": c["id"], "uuid": c["uuid"], "name": c["name"]}
+            for c in WCP_MANIFEST.get("components", [])
+        ]
+    })
 
 @app.route("/widget/export.wcp")
 def export_wcp():
