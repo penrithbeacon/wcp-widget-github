@@ -1,0 +1,13 @@
+services:
+  github:
+    build: .
+    image: wcp-widget-github
+    container_name: wcp-widget-github
+    ports:
+      - "3743:3743"
+    volumes:
+      - gh-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  gh-data:
