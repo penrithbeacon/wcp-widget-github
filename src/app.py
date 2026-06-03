@@ -22,7 +22,8 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin']  = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, DELETE, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = (
-        'Content-Type, Wcp-Instance-Id, Wcp-Dashboard-Id, Wcp-Version, Wcp-Widget-Id'
+        'Content-Type, Wcp-Instance-Id, Wcp-Dashboard-Id, Wcp-Version, Wcp-Widget-Id, '
+        'Wcp-Orchestration-Id, Wcp-Application-Id'
     )
     return response
 
@@ -37,13 +38,33 @@ GLOBAL_CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
 GH_BASE = "https://api.github.com"
 REPOS_TTL = 60
 
-# ── Instance ID helpers ───────────────────────────────────────────────────────
+# ── Instance ID helpers (WCP 1.5.0) ──────────────────────────────────────────
 
 def get_instance_id():
     iid = request.headers.get("Wcp-Instance-Id", "").strip()
     if not iid:
         iid = (request.args.get("wcpInstanceId", "") or "").strip()
     return iid
+
+def get_orchestration_id():
+    oid = request.headers.get("Wcp-Orchestration-Id", "").strip()
+    if not oid:
+        oid = (request.args.get("wcpOrchestrationId", "") or "").strip()
+    return oid
+
+def get_application_id():
+    aid = request.headers.get("Wcp-Application-Id", "").strip()
+    if not aid:
+        aid = (request.args.get("wcpApplicationId", "") or "").strip()
+    return aid
+
+def get_state_key():
+    """WCP 1.5.0 compound state key. See widgetcontextprotocol.com — WCP Request Headers."""
+    orch_id = get_orchestration_id()
+    app_id  = get_application_id()
+    if orch_id and app_id: return f"{orch_id}:{app_id}"
+    if orch_id:            return orch_id
+    return "global"
 
 def _safe_iid(iid):
     return "".join(c for c in iid if c.isalnum() or c == "-")[:64]
@@ -148,10 +169,10 @@ ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
 </svg>"""
 
 WCP_MANIFEST = {
-    "wcp": "1.4.0",
+    "wcp": "1.5.0",
     "uuid": "47b58468-2ad8-4cbd-a7f3-58ad8fcf213c",
     "name": "GitHub",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": (
         "GitHub repositories — browse all repos for the authenticated account, "
         "sorted by last push. Manage credentials via the Settings component."
@@ -215,7 +236,7 @@ WCP_MANIFEST = {
 def container_directory():
     return jsonify({
         "type":    "directory",
-        "wcp":     "1.4.0",
+        "wcp":     "1.5.0",
         "widgets": [{
             "id":          "github",
             "uuid":        WCP_MANIFEST["uuid"],
@@ -229,7 +250,8 @@ def container_directory():
 @app.route("/widget/")
 @app.route("/widget/index.html")
 def widget_root():
-    return render_template("widget.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id())
+    return render_template("widget.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id(),
+        wcp_orchestration_id=get_orchestration_id(), wcp_application_id=get_application_id())
 
 @app.route("/widget/wcp")
 def widget_wcp():
@@ -282,15 +304,18 @@ Port: 3743 | Spec: https://widgetcontextprotocol.com
 
 @app.route("/widget/repos")
 def page_repos():
-    return render_template("repos.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id())
+    return render_template("repos.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id(),
+        wcp_orchestration_id=get_orchestration_id(), wcp_application_id=get_application_id())
 
 @app.route("/widget/settings")
 def page_settings():
-    return render_template("settings.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id())
+    return render_template("settings.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id(),
+        wcp_orchestration_id=get_orchestration_id(), wcp_application_id=get_application_id())
 
 @app.route("/widget/help")
 def page_help():
-    return render_template("help.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id())
+    return render_template("help.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id(),
+        wcp_orchestration_id=get_orchestration_id(), wcp_application_id=get_application_id())
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
