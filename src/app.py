@@ -169,7 +169,7 @@ ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
 </svg>"""
 
 WCP_MANIFEST = {
-    "wcp": "1.5.0",
+    "wcp": "2.0.0",
     "uuid": "47b58468-2ad8-4cbd-a7f3-58ad8fcf213c",
     "name": "GitHub",
     "version": "1.1.0",
@@ -179,6 +179,13 @@ WCP_MANIFEST = {
     ),
     "icon": "/widget/icon.svg",
     "health": "/widget/health",
+    "container": {
+        "image":            "penrithbeacon/wcp-widget-github",
+        "tag":              "1.1.0-wcp2.0.0",
+        "port":             3743,
+        "volumes":          [{"name": "gh-data", "mountPath": "/app/data"}],
+        "defaultLifecycle": "always",
+    },
     "configuration": {
         "submitEndpoint": "/widget/configure",
         "fields": [
@@ -236,7 +243,7 @@ WCP_MANIFEST = {
 def container_directory():
     return jsonify({
         "type":    "directory",
-        "wcp":     "1.5.0",
+        "wcp":     "2.0.0",
         "widgets": [{
             "id":          "github",
             "uuid":        WCP_MANIFEST["uuid"],
