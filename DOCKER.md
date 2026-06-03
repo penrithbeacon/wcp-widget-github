@@ -56,7 +56,7 @@ and paste it in.
 
 ## WCP Request Headers
 
-This widget supports the WCP 1.4.0 request headers:
+This widget supports the WCP 1.5.0 request headers:
 
 | Header | Required | Description |
 |--------|----------|-------------|
@@ -64,14 +64,16 @@ This widget supports the WCP 1.4.0 request headers:
 | `Wcp-Dashboard-Id` | Optional | UUID identifying the requesting dashboard |
 | `Wcp-Version` | Optional | Protocol version the dashboard speaks |
 | `Wcp-Widget-Id` | Optional | Widget ID from Container Directory selection |
+| `Wcp-Orchestration-Id` | Optional | UUID of the active orchestration — shared state key for multi-component coordination |
+| `Wcp-Application-Id` | Optional | UUID of the active application window (kiosk only) — combined with orchestration ID for full isolation |
 
 ## WCP Endpoints
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /wcp` | WCP 1.4.0 Container Directory |
+| `GET /wcp` | WCP 1.5.0 Container Directory |
 | `GET /widget/` | Compact widget card (iframe) |
-| `GET /widget/wcp` | WCP 1.4.0 manifest |
+| `GET /widget/wcp` | WCP 1.5.0 manifest |
 | `GET /widget/health` | Health check |
 | `GET /widget/icon.svg` | Widget icon (SVG) |
 | `GET /widget/repos` | Repositories component page |
@@ -87,7 +89,7 @@ This widget supports the WCP 1.4.0 request headers:
 
 | Property | Value |
 |----------|-------|
-| WCP Version | 1.4.0 |
+| WCP Version | 1.5.0 |
 | Widget Version | 1.0.1 |
 | Render mode | iframe |
 | Auth | none (token stored server-side) |
@@ -107,7 +109,7 @@ This widget supports the WCP 1.4.0 request headers:
 | Tag | Description |
 |-----|-------------|
 | `latest` | Latest stable release |
-| `1.0.1-wcp1.4.0` | Widget v1.0.1, WCP 1.4.0 — server UUID, Container Directory, CORS, Wcp-Widget-Id |
+| `1.0.1-wcp1.4.0` | Widget v1.0.1, WCP 1.5.0 — server UUID, Container Directory, CORS, Wcp-Widget-Id |
 | `1.0.0-wcp1.3.1` | Widget v1.0.0, WCP 1.3.1 — initial release |
 
 ## Source
