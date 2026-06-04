@@ -16,7 +16,7 @@ docker run -d \
   -p 3743:3743 \
   -v gh-data:/app/data \
   --restart unless-stopped \
-  penrithbeacon/wcp-widget-github:latest
+  docker.io/penrithbeacon/wcp-widget-github:latest
 ```
 
 Then add it to your WCP dashboard at the container's network address.
@@ -26,7 +26,7 @@ Then add it to your WCP dashboard at the container's network address.
 ```yaml
 services:
   github:
-    image: penrithbeacon/wcp-widget-github:latest
+    image: docker.io/penrithbeacon/wcp-widget-github:latest
     container_name: wcp-widget-github
     ports:
       - "3743:3743"
