@@ -169,10 +169,10 @@ ICON_SVG = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
 </svg>"""
 
 WCP_MANIFEST = {
-    "wcp": "2.0.0",
+    "wcp": "2.1.0",
     "uuid": "47b58468-2ad8-4cbd-a7f3-58ad8fcf213c",
     "name": "GitHub",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": (
         "GitHub repositories — browse all repos for the authenticated account, "
         "sorted by last push. Manage credentials via the Settings component."
@@ -182,7 +182,7 @@ WCP_MANIFEST = {
     "container": {
         "image":            "docker.io/penrithbeacon/wcp-widget-github",
         "source":           {"type": "registry"},
-        "tag":              "1.1.0-wcp2.0.0",
+        "tag":              "1.2.0-wcp2.1.0",
         "port":             3743,
         "volumes":          [{"name": "gh-data", "mountPath": "/app/data"}],
         "defaultLifecycle": "always",
@@ -238,13 +238,37 @@ WCP_MANIFEST = {
     ],
 }
 
+PUBLISHED_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'published', 'index.html')
+
+WIDGET_JSONLD = json.dumps({
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": WCP_MANIFEST["name"],
+    "softwareVersion": WCP_MANIFEST["version"],
+    "description": WCP_MANIFEST["description"],
+    "identifier": WCP_MANIFEST["uuid"],
+    "applicationCategory": "WCP Widget",
+    "operatingSystem": "Web",
+    "isBasedOn": {
+        "@type": "WebSite",
+        "name": "Widget Context Protocol",
+        "url": "https://widgetcontextprotocol.com",
+    },
+    "additionalProperty": [
+        {"@type": "PropertyValue", "name": "wcpVersion",      "value": WCP_MANIFEST["wcp"]},
+        {"@type": "PropertyValue", "name": "containerImage",  "value": WCP_MANIFEST["container"]["image"]},
+        {"@type": "PropertyValue", "name": "containerTag",    "value": WCP_MANIFEST["container"]["tag"]},
+        {"@type": "PropertyValue", "name": "containerPort",   "value": str(WCP_MANIFEST["container"]["port"])},
+    ],
+}, indent=2)
+
 # ── WCP boilerplate endpoints ─────────────────────────────────────────────────
 
 @app.route("/wcp")
 def container_directory():
     return jsonify({
         "type":    "directory",
-        "wcp":     "2.0.0",
+        "wcp":     "2.1.0",
         "widgets": [{
             "id":          "github",
             "uuid":        WCP_MANIFEST["uuid"],
@@ -255,15 +279,47 @@ def container_directory():
         }]
     })
 
+@app.route('/')
+def published_spa():
+    if os.path.exists(PUBLISHED_PATH):
+        with open(PUBLISHED_PATH, 'r', encoding='utf-8') as f:
+            return Response(f.read(), mimetype='text/html')
+    return Response('Not Found', status=404, mimetype='text/plain')
+
+@app.route('/widget/publish', methods=['POST'])
+def publish():
+    html = request.get_data(as_text=True)
+    if not html:
+        return jsonify({'success': False, 'error': 'Empty body'}), 400
+    try:
+        os.makedirs(os.path.dirname(PUBLISHED_PATH), exist_ok=True)
+        with open(PUBLISHED_PATH, 'w', encoding='utf-8') as f:
+            f.write(html)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/widget/publish', methods=['DELETE'])
+def unpublish():
+    try:
+        if os.path.exists(PUBLISHED_PATH):
+            os.remove(PUBLISHED_PATH)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route("/widget/")
 @app.route("/widget/index.html")
 def widget_root():
-    return render_template("widget.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id(),
+    return render_template("widget.html", manifest=WCP_MANIFEST, jsonld=WIDGET_JSONLD,
+        wcp_instance_id=get_instance_id(),
         wcp_orchestration_id=get_orchestration_id(), wcp_application_id=get_application_id())
 
 @app.route("/widget/wcp")
 def widget_wcp():
-    return jsonify(WCP_MANIFEST)
+    manifest = dict(WCP_MANIFEST)
+    manifest['web'] = {'published': os.path.exists(PUBLISHED_PATH)}
+    return jsonify(manifest)
 
 @app.route("/widget/health")
 def widget_health():
@@ -312,17 +368,20 @@ Port: 3743 | Spec: https://widgetcontextprotocol.com
 
 @app.route("/widget/repos")
 def page_repos():
-    return render_template("repos.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id(),
+    return render_template("repos.html", manifest=WCP_MANIFEST, jsonld=WIDGET_JSONLD,
+        wcp_instance_id=get_instance_id(),
         wcp_orchestration_id=get_orchestration_id(), wcp_application_id=get_application_id())
 
 @app.route("/widget/settings")
 def page_settings():
-    return render_template("settings.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id(),
+    return render_template("settings.html", manifest=WCP_MANIFEST, jsonld=WIDGET_JSONLD,
+        wcp_instance_id=get_instance_id(),
         wcp_orchestration_id=get_orchestration_id(), wcp_application_id=get_application_id())
 
 @app.route("/widget/help")
 def page_help():
-    return render_template("help.html", manifest=WCP_MANIFEST, wcp_instance_id=get_instance_id(),
+    return render_template("help.html", manifest=WCP_MANIFEST, jsonld=WIDGET_JSONLD,
+        wcp_instance_id=get_instance_id(),
         wcp_orchestration_id=get_orchestration_id(), wcp_application_id=get_application_id())
 
 # ── Configuration ─────────────────────────────────────────────────────────────
