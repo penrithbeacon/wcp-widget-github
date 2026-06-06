@@ -172,7 +172,7 @@ WCP_MANIFEST = {
     "wcp": "2.1.0",
     "uuid": "47b58468-2ad8-4cbd-a7f3-58ad8fcf213c",
     "name": "GitHub",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": (
         "GitHub repositories — browse all repos for the authenticated account, "
         "sorted by last push. Manage credentials via the Settings component."
@@ -182,7 +182,7 @@ WCP_MANIFEST = {
     "container": {
         "image":            "docker.io/penrithbeacon/wcp-widget-github",
         "source":           {"type": "registry"},
-        "tag":              "1.2.0-wcp2.1.0",
+        "tag":              "1.3.0-wcp2.1.0",
         "port":             3743,
         "volumes":          [{"name": "gh-data", "mountPath": "/app/data"}],
         "defaultLifecycle": "always",
