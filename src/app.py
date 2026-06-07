@@ -213,7 +213,7 @@ WCP_MANIFEST = {
             "path": "/widget/repos",
             "icon": "/widget/icon.svg",
             "renderMode": "iframe",
-            "defaultSize": {"w": 12, "h": 6},
+            "defaultSize": {"w": 12, "h": 12},
         },
         {
             "id": "gh-settings",
@@ -223,7 +223,7 @@ WCP_MANIFEST = {
             "path": "/widget/settings",
             "icon": "/widget/icon.svg",
             "renderMode": "iframe",
-            "defaultSize": {"w": 12, "h": 6},
+            "defaultSize": {"w": 12, "h": 12},
         },
         {
             "id": "gh-help",
@@ -233,7 +233,7 @@ WCP_MANIFEST = {
             "path": "/widget/help",
             "icon": "/widget/icon.svg",
             "renderMode": "iframe",
-            "defaultSize": {"w": 12, "h": 6},
+            "defaultSize": {"w": 12, "h": 12},
         },
     ],
 }
