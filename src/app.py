@@ -77,9 +77,20 @@ def config_file_for(iid):
 
 # ── Config helpers ────────────────────────────────────────────────────────────
 
+def _resolve_config_key():
+    """Resolve the best config key: orchestration ID (shared by all components in
+    the same orchestration) > instance ID (per-component) > global."""
+    orch_id = get_orchestration_id()
+    if orch_id:
+        return _safe_iid(orch_id)
+    iid = get_instance_id()
+    if iid:
+        return _safe_iid(iid)
+    return ""
+
 def read_config(iid=None):
     if iid is None:
-        iid = get_instance_id()
+        iid = _resolve_config_key()
     path = config_file_for(iid)
     instance_cfg = None
     try:
@@ -90,6 +101,17 @@ def read_config(iid=None):
     # Fall back to global config if per-instance config has no token
     # (covers both missing file and empty {} created by Add Widget flow)
     if (instance_cfg is None or not instance_cfg.get("githubToken")) and path != GLOBAL_CONFIG_FILE:
+        # Also try instance ID if we resolved to orchestration ID
+        inst_id = _safe_iid(get_instance_id())
+        if inst_id and inst_id != iid:
+            inst_path = config_file_for(inst_id)
+            try:
+                with open(inst_path) as f:
+                    inst_cfg = json.load(f)
+                if inst_cfg.get("githubToken"):
+                    return inst_cfg
+            except Exception:
+                pass
         try:
             with open(GLOBAL_CONFIG_FILE) as f:
                 global_cfg = json.load(f)
@@ -100,7 +122,7 @@ def read_config(iid=None):
 
 def write_config(data, iid=None):
     if iid is None:
-        iid = get_instance_id()
+        iid = _resolve_config_key()
     os.makedirs(DATA_DIR, exist_ok=True)
     path = config_file_for(iid)
     current = {}
@@ -172,7 +194,7 @@ WCP_MANIFEST = {
     "wcp": "2.1.0",
     "uuid": "47b58468-2ad8-4cbd-a7f3-58ad8fcf213c",
     "name": "GitHub",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": (
         "GitHub repositories — browse all repos for the authenticated account, "
         "sorted by last push. Manage credentials via the Settings component."
@@ -182,7 +204,7 @@ WCP_MANIFEST = {
     "container": {
         "image":            "docker.io/penrithbeacon/wcp-widget-github",
         "source":           {"type": "registry"},
-        "tag":              "1.3.0-wcp2.1.0",
+        "tag":              "1.4.0-wcp2.1.0",
         "port":             3743,
         "volumes":          [{"name": "gh-data", "mountPath": "/app/data"}],
         "defaultLifecycle": "always",
@@ -321,6 +343,12 @@ def widget_wcp():
     manifest['web'] = {'published': os.path.exists(PUBLISHED_PATH)}
     return jsonify(manifest)
 
+@app.route("/widget/index")
+def widget_index():
+    return render_template("index-page.html", manifest=WCP_MANIFEST, jsonld=WIDGET_JSONLD,
+        wcp_instance_id=get_instance_id(),
+        wcp_orchestration_id=get_orchestration_id(), wcp_application_id=get_application_id())
+
 @app.route("/widget/health")
 def widget_health():
     return jsonify({"status": "ok", "name": WCP_MANIFEST["name"],
@@ -390,14 +418,18 @@ def page_help():
 @app.route("/widget/configure", methods=["POST"])
 def widget_configure():
     try:
-        iid = get_instance_id()
+        key = _resolve_config_key()
         data = request.get_json(force=True) or {}
         token = (data.get("githubToken") or "").strip() or None
         cfg_data = {"githubToken": token}
-        cfg = write_config(cfg_data, iid=iid)
-        # Mirror credentials to global config so all other staves find them
+        cfg = write_config(cfg_data, iid=key)
+        # Also write to instance-level (backwards compat) and global
+        iid = _safe_iid(get_instance_id())
+        if iid and iid != key:
+            write_config(cfg_data, iid=iid)
         if token:
             write_config(cfg_data, iid="")
+        clear_cache(key)
         clear_cache(iid)
         clear_cache("")
         return jsonify({"success": True, "configured": bool(cfg.get("githubToken"))})
@@ -426,7 +458,7 @@ def _not_configured_response():
 
 @app.route("/widget/api/repos")
 def api_repos():
-    iid = get_instance_id()
+    iid = _resolve_config_key()
     cache = _cache_for(iid)
     now = time.time()
     if cache["repos"]["data"] and now - cache["repos"]["time"] < REPOS_TTL:
